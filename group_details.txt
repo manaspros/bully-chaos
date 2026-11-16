@@ -1,0 +1,7 @@
+Group number: TODO
+Project title: Bully Chaos: Self-Healing Leader Election
+Members (name, roll number):
+  1. TODO, TODO
+  2. TODO, TODO
+  3. TODO, TODO
+  4. TODO, TODO

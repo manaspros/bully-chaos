@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" font-family="Helvetica, Arial, sans-serif" fill="#1c2430">
+<defs><marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#667085"/></marker>
+<marker id="b" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1a73e8"/></marker></defs>
+<rect width="1600" height="900" fill="#f4f6fa"/>
+<text x="800" y="55" text-anchor="middle" font-size="42" font-weight="700">Bully Chaos architecture</text>
+<rect x="560" y="85" width="480" height="80" rx="14" fill="#fff" stroke="#1a73e8" stroke-width="3"/>
+<text x="800" y="138" text-anchor="middle" font-size="32" font-weight="700">Browser dashboard</text>
+<line x1="800" y1="167" x2="800" y2="228" stroke="#1a73e8" stroke-width="4" marker-end="url(#b)"/>
+<text x="830" y="205" font-size="26" fill="#1a73e8">GET /api/state every 300 ms, POST /api/*</text>
+<rect x="40" y="230" width="1520" height="165" rx="16" fill="#fff" stroke="#8e24aa" stroke-width="3"/>
+<text x="800" y="278" text-anchor="middle" font-size="34" font-weight="700">control.py :9000</text>
+<text x="800" y="322" text-anchor="middle" font-size="26">serves dashboard, merges state, collects events + metrics</text>
+<text x="800" y="356" text-anchor="middle" font-size="26">spawn / SIGKILL / revive, partition table, chaos thread</text>
+<text x="800" y="388" text-anchor="middle" font-size="24" fill="#b3261e" font-weight="700">observe + inject faults only, not part of the protocol</text>
+<rect x="30" y="560" width="220" height="110" rx="14" fill="#e8f5ec" stroke="#2e9e5b" stroke-width="3"/><text x="140" y="607" text-anchor="middle" font-size="34" font-weight="700">node 1</text><text x="140" y="647" text-anchor="middle" font-size="26" fill="#475467">:8001  node.py</text><line x1="140" y1="395" x2="140" y2="558" stroke="#667085" stroke-width="3" stroke-dasharray="8 6" marker-end="url(#a)"/><rect x="310" y="560" width="220" height="110" rx="14" fill="#e8f5ec" stroke="#2e9e5b" stroke-width="3"/><text x="420" y="607" text-anchor="middle" font-size="34" font-weight="700">node 2</text><text x="420" y="647" text-anchor="middle" font-size="26" fill="#475467">:8002  node.py</text><line x1="420" y1="395" x2="420" y2="558" stroke="#667085" stroke-width="3" stroke-dasharray="8 6" marker-end="url(#a)"/><rect x="590" y="560" width="220" height="110" rx="14" fill="#e8f5ec" stroke="#2e9e5b" stroke-width="3"/><text x="700" y="607" text-anchor="middle" font-size="34" font-weight="700">node 3</text><text x="700" y="647" text-anchor="middle" font-size="26" fill="#475467">:8003  node.py</text><line x1="700" y1="395" x2="700" y2="558" stroke="#667085" stroke-width="3" stroke-dasharray="8 6" marker-end="url(#a)"/><rect x="870" y="560" width="220" height="110" rx="14" fill="#e8f5ec" stroke="#2e9e5b" stroke-width="3"/><text x="980" y="607" text-anchor="middle" font-size="34" font-weight="700">node 4</text><text x="980" y="647" text-anchor="middle" font-size="26" fill="#475467">:8004  node.py</text><line x1="980" y1="395" x2="980" y2="558" stroke="#667085" stroke-width="3" stroke-dasharray="8 6" marker-end="url(#a)"/><rect x="1150" y="560" width="220" height="110" rx="14" fill="#e8f5ec" stroke="#2e9e5b" stroke-width="3"/><text x="1260" y="607" text-anchor="middle" font-size="34" font-weight="700">node 5</text><text x="1260" y="647" text-anchor="middle" font-size="26" fill="#475467">:8005  node.py</text><line x1="1260" y1="395" x2="1260" y2="558" stroke="#667085" stroke-width="3" stroke-dasharray="8 6" marker-end="url(#a)"/>
+<text x="150" y="475" font-size="24" fill="#475467">spawn / kill</text>
+<text x="1230" y="475" font-size="24" fill="#475467" text-anchor="end">nodes POST each message to /event</text>
+<line x1="140" y1="700" x2="1260" y2="700" stroke="#d93025" stroke-width="4"/>
+<line x1="140" y1="700" x2="140" y2="672" stroke="#d93025" stroke-width="4"/>
+<line x1="420" y1="700" x2="420" y2="672" stroke="#d93025" stroke-width="4"/><line x1="700" y1="700" x2="700" y2="672" stroke="#d93025" stroke-width="4"/><line x1="980" y1="700" x2="980" y2="672" stroke="#d93025" stroke-width="4"/><line x1="1260" y1="700" x2="1260" y2="672" stroke="#d93025" stroke-width="4"/>
+<text x="800" y="755" text-anchor="middle" font-size="30" font-weight="700">Direct node-to-node HTTP + JSON</text>
+<text x="800" y="800" text-anchor="middle" font-size="28"><tspan fill="#d93025" font-weight="700">ELECTION</tspan>  <tspan fill="#1a73e8" font-weight="700">OK</tspan>  <tspan fill="#8e24aa" font-weight="700">COORDINATOR</tspan>  <tspan fill="#667085" font-weight="700">HEARTBEAT</tspan>  <tspan fill="#0b8f8f" font-weight="700">TASK</tspan></text>
+<text x="800" y="850" text-anchor="middle" font-size="26" fill="#475467">Highest live id wins. The nodes keep electing even if control.py dies.</text>
+</svg>

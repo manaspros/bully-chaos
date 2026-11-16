@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bully Chaos</title>
+<style>
+:root{
+ --paper:#eef1ec; --panel:#f8faf7; --ink:#1a2229; --mute:#5b6660; --rule:#c9d1ca;
+ --leader:#c98a04; --cand:#e08a5c; --dead:#a3aaa5; --cutA:rgba(207,74,31,.09); --cutB:rgba(70,60,176,.09);
+ --ELECTION:#cf4a1f; --OK:#1e776f; --COORDINATOR:#463cb0; --HEARTBEAT:#8d9891;
+ --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,"DejaVu Sans Mono",Consolas,monospace;
+ --sans:system-ui,-apple-system,"Segoe UI",Ubuntu,Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.4 var(--sans);
+ display:grid;grid-template-columns:minmax(0,1fr) 380px;grid-template-rows:auto minmax(0,1fr) auto;
+ gap:12px;padding:14px 18px;height:100vh}
+button{font:600 15px var(--sans);padding:7px 14px;border:1px solid var(--rule);border-radius:6px;
+ background:var(--panel);color:var(--ink);cursor:pointer}
+button:hover:not(:disabled){border-color:var(--ink)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--COORDINATOR);outline-offset:2px}
+button[aria-pressed=true]{background:var(--ELECTION);border-color:var(--ELECTION);color:#fff}
+.panel{background:var(--panel);border:1px solid var(--rule);border-radius:8px}
+
+/* header: the one sentence that matters, then controls */
+header{grid-column:1/-1;display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.brand{font:700 14px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+#status{font:700 30px var(--mono);letter-spacing:-.01em;flex:1;min-width:280px}
+#status em{font-style:normal;color:var(--leader)}
+#status.none em,#status.split em{color:var(--ELECTION)}
+#status small{font:500 16px var(--mono);color:var(--mute);margin-left:10px}
+.controls{display:flex;gap:8px;flex-wrap:wrap}
+#banner{grid-column:1/-1;display:none;padding:10px 14px;border-left:5px solid var(--ELECTION);
+ background:var(--panel);font-weight:600}
+
+/* timeline */
+#tl{display:grid;grid-template-columns:270px minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;min-height:0}
+#heads{display:flex;flex-direction:column;border-right:1px solid var(--rule)}
+.lane{flex:1;display:flex;align-items:center;gap:12px;padding:0 12px;border-bottom:1px dashed var(--rule);min-height:0}
+.lane:last-child{border-bottom:0}
+.id{font:700 34px/1 var(--mono);width:54px;flex:none}
+.id sup{font-size:15px;color:var(--mute);margin-right:1px;vertical-align:14px}
+.meta{flex:1;min-width:0}
+.top{display:flex;align-items:center;gap:6px}
+.st{font:700 12px var(--mono);letter-spacing:.12em}
+.sub{font:13px/1.3 var(--mono);color:var(--mute);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.lane.LEADER .st{color:var(--leader)} .lane.CANDIDATE .st{color:var(--ELECTION)}
+.lane.DEAD .id,.lane.DEAD .st{color:var(--dead)}
+.lane button{padding:4px 10px;font-size:13px;flex:none;min-width:68px}
+.crown{display:none;width:22px;height:16px;fill:var(--leader)} .lane.LEADER .crown{display:inline}
+#plot{position:relative;min-height:0}
+#cv{position:absolute;inset:0;width:100%;height:100%}
+#legend{grid-column:1/-1;display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:8px 12px;
+ border-top:1px solid var(--rule);font:13px var(--mono);color:var(--mute)}
+#legend i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:6px}
+#legend .note{margin-left:auto;font-family:var(--sans)}
+
+/* log */
+#log{grid-row:2/4;grid-column:2;display:flex;flex-direction:column;min-height:0}
+#log h2{margin:0;padding:10px 14px;font:700 13px var(--mono);letter-spacing:.12em;text-transform:uppercase;
+ color:var(--mute);display:flex;justify-content:space-between;border-bottom:1px solid var(--rule)}
+#log label{font:500 13px var(--sans);letter-spacing:0;text-transform:none;cursor:pointer}
+#rows{overflow-y:auto;flex:1;padding:6px 0;font:14px/1.55 var(--mono)}
+.r{display:grid;grid-template-columns:92px 112px 1fr;padding:0 14px;white-space:nowrap}
+.r span{overflow:hidden;text-overflow:ellipsis}
+.r .t{color:var(--mute)} .r .k{font-weight:700}
+#rows .empty{padding:10px 14px;color:var(--mute);font-family:var(--sans)}
+
+/* readout */
+#readout{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-end;padding:10px 14px}
+.q span{display:block;font:12px var(--sans);color:var(--mute)}
+.q b{font:700 22px var(--mono);font-variant-numeric:tabular-nums}
+#spark{width:170px;height:30px;display:block}
+
+@media (max-width:900px){
+ body{grid-template-columns:1fr;grid-template-rows:auto auto 60vh auto 50vh;height:auto}
+ #log{grid-row:auto;grid-column:auto}
+ #tl{grid-template-columns:140px minmax(0,1fr)}
+ .id{font-size:26px;width:44px} #status{font-size:22px}
+}
+</style>
+</head>
+<body>
+<header>
+ <span class="brand">Bully Chaos</span>
+ <div id="status" aria-live="polite">Connecting…</div>
+ <div class="controls">
+  <button id="split">Split</button>
+  <button id="heal">Heal</button>
+  <button id="chaos" aria-pressed="false">Chaos monkey</button>
+  <button id="reset">Reset</button>
+ </div>
+</header>
+<div id="banner" role="alert">Can't reach control.py. Start it with <code>./run.sh</code>; this page reconnects on its own.</div>
+
+<section id="tl" class="panel" aria-label="Space-time diagram">
+ <div id="heads"></div>
+ <div id="plot"><canvas id="cv"></canvas></div>
+ <div id="legend">
+  <span><i style="background:var(--ELECTION)"></i>Election</span>
+  <span><i style="background:var(--OK)"></i>OK</span>
+  <span><i style="background:var(--COORDINATOR)"></i>Coordinator</span>
+  <span><i style="background:var(--HEARTBEAT);opacity:.5"></i>Heartbeat</span>
+  <span><i style="background:var(--leader);height:8px"></i>Leading</span>
+  <span><i style="background:var(--cand);height:5px"></i>Electing</span>
+  <span class="note">Higher ids sit on top: elections climb, the winner's announcement fans down.</span>
+ </div>
+</section>
+
+<section id="log" class="panel" aria-label="Event log">
+ <h2>Messages <label><input type="checkbox" id="showhb"> show heartbeats</label></h2>
+ <div id="rows"><div class="empty">No messages yet.</div></div>
+</section>
+
+<section id="readout" class="panel" aria-label="Metrics"></section>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const css = getComputedStyle(document.documentElement), C = k => css.getPropertyValue("--" + k).trim();
+const MSG = ["ELECTION", "OK", "COORDINATOR", "HEARTBEAT"];
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let S = null, n = 0, lanes = {}, hist = {}, msgs = [], lastTs = -Infinity, logKey = "", noLeaderSince = null;
+// ponytail: node event ts and the browser clock are compared directly; fine while both run on one machine.
+const now = () => Date.now() / 1000;
+const span = () => 30 * (S ? S.slow : 1);
+
+function api(path, body) {
+  return fetch(path, {method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(body || {})}).catch(() => {});
+}
+function h(tag, cls, txt) { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+
+function buildLanes() {
+  const box = $("heads"); box.replaceChildren(); lanes = {};
+  for (let id = n; id >= 1; id--) {           // highest id on top
+    const row = h("div", "lane"), idEl = h("div", "id");
+    idEl.append(h("sup", "", "N"), String(id));
+    const meta = h("div", "meta"), st = h("div", "st"), sub = h("div", "sub");
+    const crown = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    crown.setAttribute("viewBox", "0 0 22 16"); crown.setAttribute("class", "crown"); crown.setAttribute("aria-hidden", "true");
+    crown.innerHTML = '<path d="M1 15 L3 4 L8 9 L11 1 L14 9 L19 4 L21 15 Z"/>';
+    const top = h("div", "top"); top.append(st, crown); meta.append(top, sub);
+    const btn = h("button");
+    btn.onclick = () => api((lanes[id].alive ? "/api/kill/" : "/api/revive/") + id);
+    row.append(idEl, meta, btn); box.appendChild(row);
+    lanes[id] = {row, st, sub, btn, alive: true};
+    hist[id] = hist[id] || [];
+  }
+}
+
+function render(s) {
+  const t = now();
+  if (s.n !== n) { n = s.n; buildLanes(); }
+  for (const nd of s.nodes) {
+    const L = lanes[nd.id]; if (!L) continue;
+    const st = nd.alive ? nd.state : "DEAD", blocked = nd.blocked || [];
+    L.alive = nd.alive;
+    L.row.className = "lane " + st;
+    L.st.textContent = {LEADER: "LEADER", CANDIDATE: "ELECTING", FOLLOWER: "FOLLOWER", DEAD: "CRASHED"}[st] || st;
+    L.sub.textContent = !nd.alive ? "process killed"
+      : blocked.length ? "cut off from " + blocked.map(x => "N" + x).join(" ")
+      : st === "LEADER" ? "serves tasks" : nd.leader_id ? "follows N" + nd.leader_id : "no leader known";
+    L.btn.textContent = nd.alive ? "Kill" : "Revive";
+    L.btn.setAttribute("aria-label", (nd.alive ? "Kill N" : "Revive N") + nd.id);
+    // cut: 0 = connected, 1 = side holding N (top), 2 = the other side
+    const H = hist[nd.id], last = H[H.length - 1], cut = !blocked.length ? 0 : blocked.includes(s.n) ? 2 : 1;
+    if (!last || last.st !== st || last.cut !== cut) H.push({t, st, cut});
+  }
+  const ls = s.leaders || [], status = $("status");
+  status.className = ls.length === 1 ? "" : ls.length ? "split" : "none";
+  status.replaceChildren();
+  if (ls.length === 1) {
+    noLeaderSince = null;
+    const H = hist[ls[0]] || [], cur = H[H.length - 1];
+    status.append("Leader ", h("em", "", "N" + ls[0]), h("small", "", cur ? "for " + (t - cur.t).toFixed(0) + " s" : ""));
+  } else if (ls.length) {
+    status.append(h("em", "", "Split brain"), " ", ls.map(x => "N" + x).join(" + "));
+  } else {
+    if (noLeaderSince === null) noLeaderSince = t;
+    status.append(h("em", "", "No leader"), h("small", "", (t - noLeaderSince).toFixed(1) + " s and counting"));
+  }
+  const chaosOn = !!(s.chaos && s.chaos.on);
+  $("chaos").setAttribute("aria-pressed", String(chaosOn));
+  $("chaos").textContent = chaosOn ? "Stop chaos monkey" : "Chaos monkey";
+  const k = n < 3 ? 1 : 2;
+  $("split").textContent = "Split " + (k === 1 ? "1" : "1–2") + " | " + (k + 1 === n ? n : (k + 1) + "–" + n);
+
+  for (const e of s.events || []) {
+    if (e.ts <= lastTs) continue;
+    if (MSG.includes(e.type) && e.from && e.to && e.from !== e.to) msgs.push(e);
+  }
+  if ((s.events || []).length) lastTs = Math.max(lastTs, s.events[s.events.length - 1].ts);
+  msgs = msgs.filter(m => m.ts > t - span() - 2);
+  for (const id in hist) { const H = hist[id]; while (H.length > 1 && H[1].t < t - span() - 2) H.shift(); }
+
+  log(s.events || []); readout(s);
+  if (reduce) draw();
+}
+
+function readout(s) {
+  const m = s.metrics || {}, f = (v, d, u) => v == null ? "–" : v.toFixed(d) + (u || "");
+  const tps = m.tasks_per_sec || [];
+  const items = [
+    ["Last recovery", f(m.last_recovery_s, 2, " s")],
+    ["Average recovery", f(m.avg_recovery_s, 2, " s")],
+    ["Elections started / won", (m.elections_started ?? 0) + " / " + (m.elections_completed ?? 0)],
+    ["Messages per election", f(m.msgs_per_election, 1)],
+    ["Time without a leader", f(m.leaderless_s, 1, " s")],
+    ["Tasks served", String(m.tasks_served ?? 0)],
+  ];
+  const box = $("readout");
+  if (!box.children.length) {
+    for (const _ of items) { const q = h("div", "q"); q.append(h("span"), h("b")); box.appendChild(q); }
+    const q = h("div", "q"); q.append(h("span", "", "Tasks per second"));
+    q.insertAdjacentHTML("beforeend", '<svg id="spark" viewBox="0 0 170 30" preserveAspectRatio="none"><polyline fill="none" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>');
+    box.appendChild(q);
+  }
+  items.forEach((it, i) => { box.children[i].children[0].textContent = it[0]; box.children[i].children[1].textContent = it[1]; });
+  const pl = box.querySelector("polyline"), mx = Math.max(1, ...tps);
+  pl.setAttribute("stroke", C("OK"));
+  pl.setAttribute("points", tps.map((v, i) => (i * 170 / Math.max(1, tps.length - 1)).toFixed(1) + "," + (28 - v / mx * 26).toFixed(1)).join(" "));
+}
+
+function log(ev) {
+  const show = $("showhb").checked, last = ev.length ? ev[ev.length - 1].ts : 0, key = last + ":" + ev.length + ":" + show;
+  if (key === logKey) return; logKey = key;
+  const frag = document.createDocumentFragment(); let c = 0;
+  for (let i = ev.length - 1; i >= 0 && c < 150; i--) {
+    const e = ev[i];
+    if (e.type === "TASK" || (!show && e.type === "HEARTBEAT")) continue;
+    const d = new Date(e.ts * 1000), r = h("div", "r");
+    const ts = String(d.getMinutes()).padStart(2, "0") + ":" + String(d.getSeconds()).padStart(2, "0") + "." + String(d.getMilliseconds()).padStart(3, "0");
+    const k = h("span", "k", e.type.toLowerCase());
+    k.style.color = MSG.includes(e.type) ? C(e.type) : (e.type === "KILL" || e.type === "CHAOS" ? C("ELECTION") : C("ink"));
+    const what = MSG.includes(e.type) && e.from && e.to ? "N" + e.from + " → N" + e.to
+      : (e.text || "").replace(new RegExp("^" + e.type + "\\s*", "i"), "");
+    r.append(h("span", "t", ts), k, h("span", "", what));
+    frag.appendChild(r); c++;
+  }
+  if (!c) frag.appendChild(h("div", "empty", "No messages yet."));
+  $("rows").replaceChildren(frag);
+}
+
+// ---- space-time diagram ----
+const cv = $("cv"), ctx = cv.getContext("2d");
+function draw() {
+  const dpr = devicePixelRatio || 1, W = cv.clientWidth, Hh = cv.clientHeight;
+  if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(Hh * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(Hh * dpr); }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, Hh);
+  if (!n) return;
+  const t = now(), sp = span(), right = W - 28, X = ts => right - (t - ts) / sp * (right - 8);
+  const rowH = Hh / n, Y = id => (n - id + 0.5) * rowH;
+
+  // time grid
+  const step = 5 * (S ? S.slow : 1);
+  ctx.font = "12px " + C("mono"); ctx.fillStyle = C("mute"); ctx.textAlign = "center";
+  for (let a = 0; a <= sp; a += step) {
+    const x = X(t - a); ctx.strokeStyle = C("rule"); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, Hh); ctx.stroke();
+    if (x > 24) ctx.fillText(a ? "−" + a + " s" : "now", x, Hh - 6);
+  }
+
+  // lanes
+  for (let id = 1; id <= n; id++) {
+    const H = hist[id] || [], y = Y(id);
+    for (let i = 0; i < H.length; i++) {
+      const a = Math.max(H[i].t, t - sp), b = i + 1 < H.length ? H[i + 1].t : t;
+      if (b <= a) continue;
+      const x1 = X(a), x2 = X(b), st = H[i].st;
+      if (H[i].cut) { ctx.fillStyle = C(H[i].cut === 1 ? "cutB" : "cutA"); ctx.fillRect(x1, y - rowH * .38, x2 - x1, rowH * .76); }
+      ctx.setLineDash(st === "DEAD" ? [2, 6] : []);
+      ctx.strokeStyle = {LEADER: C("leader"), CANDIDATE: C("cand"), DEAD: C("dead")}[st] || C("ink");
+      ctx.lineWidth = {LEADER: 10, CANDIDATE: 6, DEAD: 2}[st] || 2;
+      ctx.lineCap = "butt";
+      ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(x2, y); ctx.stroke();
+      if (st === "DEAD" && H[i].t >= t - sp) {          // crash mark
+        const x = X(H[i].t); ctx.setLineDash([]); ctx.strokeStyle = C("ELECTION"); ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(x - 8, y - 8); ctx.lineTo(x + 8, y + 8); ctx.moveTo(x + 8, y - 8); ctx.lineTo(x - 8, y + 8); ctx.stroke();
+      }
+    }
+  }
+  ctx.setLineDash([]);
+
+  // messages: slanted send -> receive, Lamport style
+  const show = $("showhb").checked, SKEW = 18;  // px: send -> receive slant
+  for (const m of msgs) {
+    if (m.from > n || m.to > n) continue;
+    const hb = m.type === "HEARTBEAT";
+    if (hb && !show) { ctx.globalAlpha = .14; } else ctx.globalAlpha = hb ? .45 : .9;
+    const x1 = X(m.ts), y1 = Y(m.from), x2 = x1 + SKEW, y2 = Y(m.to);
+    if (x2 < 0) continue;
+    ctx.strokeStyle = ctx.fillStyle = C(m.type); ctx.lineWidth = hb ? 1 : 2;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    const ang = Math.atan2(y2 - y1, x2 - x1), s = hb ? 5 : 8;
+    ctx.beginPath(); ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - s * Math.cos(ang - .4), y2 - s * Math.sin(ang - .4));
+    ctx.lineTo(x2 - s * Math.cos(ang + .4), y2 - s * Math.sin(ang + .4)); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = C("ink"); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(right, 0); ctx.lineTo(right, Hh - 20); ctx.stroke();
+}
+function frame() { draw(); requestAnimationFrame(frame); }
+if (!reduce) requestAnimationFrame(frame);
+addEventListener("resize", draw);
+
+async function poll() {
+  try {
+    const r = await fetch("/api/state", {cache: "no-store"});
+    if (!r.ok) throw new Error(r.status);
+    S = await r.json(); $("banner").style.display = "none"; render(S);
+  } catch (e) {
+    $("banner").style.display = "block";
+    $("status").className = "none"; $("status").textContent = "Disconnected";
+  }
+  setTimeout(poll, 300);
+}
+$("split").onclick = () => { const ids = [...Array(n || 5)].map((_, i) => i + 1), k = ids.length < 3 ? 1 : 2;
+  api("/api/partition", {groups: [ids.slice(0, k), ids.slice(k)]}); };
+$("heal").onclick = () => api("/api/heal");
+$("reset").onclick = () => api("/api/reset");
+$("chaos").onclick = () => api("/api/chaos", {on: !(S && S.chaos && S.chaos.on), interval: 3.0});
+$("showhb").onchange = () => { logKey = ""; if (S) { log(S.events || []); draw(); } };
+poll();
+</script>
+</body>
+</html>
